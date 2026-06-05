@@ -1209,24 +1209,47 @@ function studentsOfClass(classLevel){
     .filter(s=>classDigit(s.classLevel)===d)
     .sort((a,b)=>String(a.classLevel).localeCompare(String(b.classLevel))||Number(a.number)-Number(b.number));
 }
+// นักเรียนเฉพาะห้องที่เลือกไว้ในหน้าบันทึกผล
+function scoreStudents(){
+  return state.students
+    .filter(s=>String(s.classLevel)===String(state.scoreRoom))
+    .sort((a,b)=>Number(a.number)-Number(b.number));
+}
+// ห้องที่ใช้กับวิชานี้ (ครู=จากตารางสอน, แอดมิน=ทุกห้องที่มีนักเรียนระดับชั้นนั้น)
+function gradeRoomsFor(sub){
+  const d=classDigit(sub.classLevel);
+  const u=state.currentUser; let rooms;
+  if(u && u.role!=='admin' && state.mySchedule && state.mySchedule.length){
+    rooms=state.mySchedule.filter(s=>s.subject===sub.name && classDigit(s.classLevel)===d).map(s=>s.classLevel);
+  }else{
+    rooms=state.students.filter(s=>classDigit(s.classLevel)===d).map(s=>s.classLevel);
+  }
+  return [...new Set(rooms.filter(Boolean))].sort();
+}
 
 function fillScoreSubjects(){
   const sel=document.getElementById('sc_subject'); const cur=sel.value;
   let subs=state.subjects.slice();
-  // ครู (ไม่ใช่แอดมิน): เห็นเฉพาะวิชาที่ตนสอน (จับคู่จากตารางสอน: ชื่อวิชา + เลขชั้น)
   const u=state.currentUser;
   if(u && u.role!=='admin' && state.mySchedule && state.mySchedule.length){
     const taught=new Set(state.mySchedule.map(s=>s.subject+'|'+classDigit(s.classLevel)));
     subs=subs.filter(s=>taught.has(s.name+'|'+classDigit(s.classLevel)));
   }
-  sel.innerHTML='<option value="">— เลือกรายวิชา —</option>'+
-    subs.sort((a,b)=>String(a.classLevel).localeCompare(String(b.classLevel))||String(a.code).localeCompare(String(b.code)))
-      .map(s=>`<option value="${s.ID}">[${esc(s.classLevel)}] ${esc(s.code)} ${esc(s.name)}</option>`).join('');
+  subs.sort((a,b)=>String(a.classLevel).localeCompare(String(b.classLevel))||String(a.code).localeCompare(String(b.code)));
+  // แยกเป็นรายห้อง (เช่น คณิตศาสตร์ ป.5/1, ป.5/2)
+  const opts=[];
+  subs.forEach(s=>gradeRoomsFor(s).forEach(room=>{
+    opts.push(`<option value="${s.ID}|${esc(room)}">[${esc(room)}] ${esc(s.code)} ${esc(s.name)}</option>`);
+  }));
+  sel.innerHTML='<option value="">— เลือกรายวิชา —</option>'+opts.join('');
   sel.value=cur;
 }
 
 async function onSelectScoreSubject(){
-  const id=document.getElementById('sc_subject').value;
+  const raw=document.getElementById('sc_subject').value;
+  const sep=raw.indexOf('|');
+  const id=sep>=0?raw.slice(0,sep):raw;
+  state.scoreRoom=sep>=0?raw.slice(sep+1):'';
   state.scoreSubject=state.subjects.find(s=>String(s.ID)===String(id));
   if(!id){
     document.getElementById('sc_empty').classList.remove('hidden');
@@ -1296,7 +1319,7 @@ async function saveUnitsFn(){
 function renderScoreTable(){
   const sub=state.scoreSubject;
   const units=state.units[sub.ID]||[];
-  const students=studentsOfClass(sub.classLevel);
+  const students=scoreStudents();
   const sm={};
   state.scores.forEach(s=>{ (sm[s.studentID]=sm[s.studentID]||{})[s.unitID]=s.score; });
   document.getElementById('scoreHead').innerHTML=`<tr class="text-left text-slate-400 border-b">
@@ -1350,7 +1373,7 @@ async function saveScoresFn(){
 /* ---- Mode B: direct ---- */
 function renderModeB(){
   const sub=state.scoreSubject;
-  const students=studentsOfClass(sub.classLevel);
+  const students=scoreStudents();
   const gmap={};
   state.grades.filter(g=>String(g.subjectID)===String(sub.ID)).forEach(g=>gmap[g.studentID]=g);
   document.getElementById('modeBBody').innerHTML = students.length ? students.map(st=>{
