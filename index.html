@@ -8,10 +8,10 @@
 <!-- ============================================================
      ⚙️ ตั้งค่า Web App URL  (จุดเดียวที่ต้องแก้)
      วาง URL ที่ได้จากการ Deploy เป็น Web App ลงในเครื่องหมาย ' ' ด้านล่าง
-     ตัวอย่าง: 'https://script.google.com/macros/s/AKfycbyNdtKZRfptuLMLcBT9QGsR9q9Y3mqgRzP_iMiQ05kurWW-yHtxBrQmQDpNLhaBuIvH/exec'
+     ตัวอย่าง: 'https://script.google.com/macros/s/AKfycb..../exec'
      ============================================================ -->
 <script>
-  window.WEB_APP_URL = 'วาง_WEB_APP_URL_ของคุณที่นี่';
+  window.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyNdtKZRfptuLMLcBT9QGsR9q9Y3mqgRzP_iMiQ05kurWW-yHtxBrQmQDpNLhaBuIvH/exec';
 </script>
 
 <!-- Tailwind CSS -->
@@ -2271,19 +2271,24 @@ function closeAttResult(){ const m=document.getElementById('attResultModal'); m.
 async function captureAttResult(){
   if(typeof html2canvas==='undefined'){ toast('โหลดเครื่องมือแคปภาพไม่สำเร็จ','error'); return; }
   const area=document.getElementById('attCapArea');
-  const box=area.parentElement; // กล่อง modal ด้านใน
-  // ขยายพื้นที่ชั่วคราวให้เห็นครบทุกคน (เลี่ยงการตัดเพราะ scroll)
-  const save={ aOv:area.style.overflow, aMax:area.style.maxHeight, bMax:box.style.maxHeight };
-  area.style.overflow='visible'; area.style.maxHeight='none'; box.style.maxHeight='none';
+  const w=Math.round(area.getBoundingClientRect().width)||460;
+  // โคลนเนื้อหาทั้งหมดไปไว้ในกล่องนอกจอที่ขยายเต็ม (กันการตัดเพราะ modal สูงเกินจอ)
+  const holder=document.createElement('div');
+  holder.style.cssText='position:fixed;left:-99999px;top:0;width:'+w+'px;background:#ffffff;padding:20px;';
+  const clone=area.cloneNode(true);
+  clone.style.cssText='overflow:visible;max-height:none;height:auto;';
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
   try{ showLoading(true);
-    await new Promise(r=>setTimeout(r,60));
-    const canvas=await html2canvas(area,{backgroundColor:'#ffffff', scale:2, useCORS:true, windowHeight:area.scrollHeight, height:area.scrollHeight});
-    const fname='เช็คชื่อ_'+(document.getElementById('att_flag_class')?.value||document.getElementById('att_period_slot')?.value||'')+'_'+todayISO()+'.png';
-    const url=canvas.toDataURL('image/png');
-    const a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+    await new Promise(r=>setTimeout(r,80));
+    const canvas=await html2canvas(holder,{backgroundColor:'#ffffff', scale:2, useCORS:true});
+    const cls=(document.getElementById('att_flag_class')&&document.getElementById('att_flag_class').value)||'';
+    const fname='เช็คชื่อ_'+cls.replace('/','-')+'_'+todayISO()+'.png';
+    const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download=fname;
+    document.body.appendChild(a); a.click(); a.remove();
     toast('ดาวน์โหลดรูปแล้ว เปิด LINE แล้วแนบรูปส่งได้เลย');
   }catch(e){ toast('แคปภาพไม่สำเร็จ: '+e.message,'error'); }
-  finally{ area.style.overflow=save.aOv; area.style.maxHeight=save.aMax; box.style.maxHeight=save.bMax; showLoading(false); }
+  finally{ holder.remove(); showLoading(false); }
 }
 
 /* ============================================================
