@@ -303,7 +303,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead><tr class="text-left text-slate-400 border-b">
-              <th class="py-2 px-2">เลขที่</th><th class="px-2">ชื่อ-นามสกุล</th>
+              <th class="py-2 px-2">เลขที่</th><th class="px-2">ชื่อ</th><th class="px-2">นามสกุล</th>
               <th class="px-2">ร้อยละ</th><th class="px-2">ระดับ 68</th><th class="px-2 text-center">เกรด 51</th>
             </tr></thead>
             <tbody id="modeBBody"></tbody>
@@ -626,14 +626,19 @@
           <button onclick="document.getElementById('stdImport').click()" class="btn bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 text-xs">📤 นำเข้ารายชื่อ (.xlsx/.csv)</button>
           <input type="file" id="stdImport" accept=".xlsx,.xls,.csv" class="hidden" onchange="importStudents(event)">
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
           <input id="st_code" class="inp" placeholder="เลขประจำตัว">
           <input id="st_num" class="inp" placeholder="เลขที่">
-          <input id="st_name" class="inp col-span-2 sm:col-span-2" placeholder="ชื่อ-นามสกุล">
+          <select id="st_prefix" class="inp">
+            <option value="">คำนำหน้า</option>
+            <option>เด็กชาย</option><option>เด็กหญิง</option><option>นาย</option><option>นางสาว</option>
+          </select>
+          <input id="st_first" class="inp" placeholder="ชื่อ">
+          <input id="st_last" class="inp" placeholder="นามสกุล">
           <select id="st_class" class="inp">
             <option value="">ชั้น/ห้อง</option>
           </select>
-          <button onclick="addStudent()" class="btn bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 text-sm col-span-2 sm:col-span-5">➕ เพิ่มรายชื่อ</button>
+          <button onclick="addStudent()" class="btn bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 text-sm col-span-2 sm:col-span-6">➕ เพิ่มรายชื่อ</button>
         </div>
       </div>
 
@@ -646,7 +651,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead><tr class="text-left text-slate-400 border-b">
-              <th class="py-2 px-2">เลขที่</th><th class="px-2">เลขประจำตัว</th><th class="px-2">ชื่อ-นามสกุล</th>
+              <th class="py-2 px-2">เลขที่</th><th class="px-2">เลขประจำตัว</th><th class="px-2">คำนำหน้า-ชื่อ</th><th class="px-2">นามสกุล</th>
               <th class="px-2">ชั้น/ห้อง</th><th class="px-2"></th>
             </tr></thead>
             <tbody id="studentsBody"></tbody>
@@ -930,7 +935,14 @@
     <div class="space-y-2">
       <input id="ed_code" class="inp" placeholder="เลขประจำตัว">
       <input id="ed_num" class="inp" placeholder="เลขที่">
-      <input id="ed_name" class="inp" placeholder="ชื่อ-นามสกุล">
+      <div class="grid grid-cols-3 gap-2">
+        <select id="ed_prefix" class="inp">
+          <option value="">คำนำหน้า</option>
+          <option>เด็กชาย</option><option>เด็กหญิง</option><option>นาย</option><option>นางสาว</option>
+        </select>
+        <input id="ed_first" class="inp" placeholder="ชื่อ">
+        <input id="ed_last" class="inp" placeholder="นามสกุล">
+      </div>
       <input id="ed_class" class="inp" placeholder="ชั้น/ห้อง">
     </div>
     <div class="flex justify-end gap-2 mt-4">
@@ -1036,6 +1048,21 @@ function showLoading(b){ const l=document.getElementById('loading'); l.classList
 function closeModal(id){ const m=document.getElementById(id); m.classList.add('hidden'); m.classList.remove('flex'); }
 function openModal(id){ const m=document.getElementById(id); m.classList.remove('hidden'); m.classList.add('flex'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// แยกคำนำหน้า/ชื่อ/นามสกุล (ใช้ฟิลด์ใหม่ก่อน ถ้าไม่มีค่อย parse จาก fullName)
+const NAME_PREFIXES_JS=['เด็กชาย','เด็กหญิง','ด.ช.','ด.ญ.','นางสาว','นาง','นาย','ว่าที่ร้อยตรีหญิง','ว่าที่ร้อยตรี'];
+function parseName(full){
+  full=String(full||'').trim(); let pre='';
+  for(const p of NAME_PREFIXES_JS){ if(full.indexOf(p)===0){ pre=p; full=full.slice(p.length).trim(); break; } }
+  const parts=full.split(/\s+/).filter(Boolean);
+  return { prefix:pre, first:parts.shift()||'', last:parts.join(' ') };
+}
+function nm(s){
+  if(s && (s.firstName||s.lastName||s.prefix)) return { prefix:s.prefix||'', first:s.firstName||'', last:s.lastName||'' };
+  return parseName(s?s.fullName:'');
+}
+function nmFirst(s){ const n=nm(s); return (n.prefix||'')+(n.first||''); }
+function nmLast(s){ return nm(s).last||''; }
 
 const THAI_MONTHS=['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 // แปลงค่าวันที่ให้เป็นรูปแบบไทย: ว่าง→ตัวอย่าง, ISO (yyyy-mm-dd)→"31 มีนาคม พ.ศ. 2570", ข้อความอื่น→แสดงตามนั้น
@@ -1228,31 +1255,38 @@ function renderStudents(){
     <tr class="border-b hover:bg-teal-50/40">
       <td class="py-2 px-2">${esc(s.number)}</td>
       <td class="px-2">${esc(s.studentCode)}</td>
-      <td class="px-2 font-medium text-slate-700">${esc(s.fullName)}</td>
+      <td class="px-2 font-medium text-slate-700 whitespace-nowrap">${esc(nmFirst(s))}</td>
+      <td class="px-2 text-slate-700 whitespace-nowrap">${esc(nmLast(s))}</td>
       <td class="px-2"><span class="badge bg-teal-100 text-teal-700">${esc(s.classLevel)}</span></td>
       <td class="px-2 text-right whitespace-nowrap">
         <button onclick='openEditStudent(${JSON.stringify(s)})' class="text-blue-500 hover:text-blue-700 px-1">✏️</button>
         <button onclick="delStudent('${s.ID}')" class="text-rose-500 hover:text-rose-700 px-1">🗑️</button>
       </td>
-    </tr>`).join('') : `<tr><td colspan="5" class="text-center text-slate-400 py-6">ยังไม่มีรายชื่อนักเรียน</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="6" class="text-center text-slate-400 py-6">ยังไม่มีรายชื่อนักเรียน</td></tr>`;
 }
 
 async function addStudent(){
-  const p={ studentCode:val('st_code'), number:val('st_num'), fullName:val('st_name'), classLevel:val('st_class') };
-  if(!p.fullName){ toast('กรุณากรอกชื่อ-นามสกุล','error'); return; }
-  try{ showLoading(true); await GAS.call('addStudent',p); ['st_code','st_num','st_name'].forEach(i=>document.getElementById(i).value=''); await loadStudents(); toast('เพิ่มรายชื่อแล้ว'); }
+  const p={ studentCode:val('st_code'), number:val('st_num'), prefix:val('st_prefix'), firstName:val('st_first'), lastName:val('st_last'), classLevel:val('st_class') };
+  if(!p.firstName){ toast('กรุณากรอกชื่อ','error'); return; }
+  try{ showLoading(true); await GAS.call('addStudent',p); ['st_code','st_num','st_first','st_last'].forEach(i=>document.getElementById(i).value=''); await loadStudents(); toast('เพิ่มรายชื่อแล้ว'); }
   catch(e){ toast(e.message,'error'); } finally{ showLoading(false); }
 }
 function openEditStudent(s){
+  const n=nm(s);
   document.getElementById('ed_id').value=s.ID;
   document.getElementById('ed_code').value=s.studentCode||'';
   document.getElementById('ed_num').value=s.number||'';
-  document.getElementById('ed_name').value=s.fullName||'';
+  const ps=document.getElementById('ed_prefix');
+  if(n.prefix && ![...ps.options].some(o=>o.value===n.prefix)) ps.add(new Option(n.prefix,n.prefix));
+  ps.value=n.prefix||'';
+  document.getElementById('ed_first').value=n.first||'';
+  document.getElementById('ed_last').value=n.last||'';
   document.getElementById('ed_class').value=s.classLevel||'';
   openModal('editStdModal');
 }
 async function saveEditStudent(){
-  const p={ id:val('ed_id'), studentCode:val('ed_code'), number:val('ed_num'), fullName:val('ed_name'), classLevel:val('ed_class') };
+  const p={ id:val('ed_id'), studentCode:val('ed_code'), number:val('ed_num'), prefix:val('ed_prefix'), firstName:val('ed_first'), lastName:val('ed_last'), classLevel:val('ed_class') };
+  if(!p.firstName){ toast('กรุณากรอกชื่อ','error'); return; }
   try{ showLoading(true); await GAS.call('updateStudent',p); closeModal('editStdModal'); await loadStudents(); toast('บันทึกแล้ว'); }
   catch(e){ toast(e.message,'error'); } finally{ showLoading(false); }
 }
@@ -1540,20 +1574,21 @@ function renderScoreTable(){
   const sm={};
   state.scores.forEach(s=>{ (sm[s.studentID]=sm[s.studentID]||{})[s.unitID]=s.score; });
   document.getElementById('scoreHead').innerHTML=`<tr class="text-left text-slate-400 border-b">
-    <th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th>
+    <th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th><th class="px-1">นามสกุล</th>
     ${units.map(u=>`<th class="px-1 text-center">${esc(u.unitName)}<br><span class="text-[10px] text-slate-300">(${u.maxScore})</span></th>`).join('')}
     <th class="px-1 text-center">รวม</th><th class="px-1 text-center">%</th><th class="px-1 text-center">ระดับ68</th><th class="px-1 text-center">เกรด</th>
   </tr>`;
   document.getElementById('scoreBody').innerHTML = (students.length && units.length) ? students.map(st=>`
     <tr class="border-b" data-sid="${st.ID}">
       <td class="px-1">${esc(st.number)}</td>
-      <td class="px-1 font-medium whitespace-nowrap">${esc(st.fullName)}</td>
+      <td class="px-1 font-medium whitespace-nowrap">${esc(nmFirst(st))}</td>
+      <td class="px-1 whitespace-nowrap">${esc(nmLast(st))}</td>
       ${units.map(u=>`<td class="px-1"><input type="number" class="inp w-14 text-sm text-center scoreCell" data-unit="${u.ID}" value="${(sm[st.ID]&&sm[st.ID][u.ID]!=null&&sm[st.ID][u.ID]!=='')?sm[st.ID][u.ID]:''}" oninput="calcRow(this)"></td>`).join('')}
       <td class="px-1 text-center sumCell font-semibold">0</td>
       <td class="px-1 text-center pctCell">-</td>
       <td class="px-1 text-center lvlCell text-xs">-</td>
       <td class="px-1 text-center grdCell font-bold text-teal-700">-</td>
-    </tr>`).join('') : `<tr><td colspan="${units.length+6}" class="text-center text-slate-400 py-6">${units.length?'ไม่มีนักเรียนในชั้นนี้':'กรุณาเพิ่มและบันทึกหน่วยก่อน'}</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="${units.length+7}" class="text-center text-slate-400 py-6">${units.length?'ไม่มีนักเรียนในชั้นนี้':'กรุณาเพิ่มและบันทึกหน่วยก่อน'}</td></tr>`;
   document.querySelectorAll('#scoreBody tr[data-sid]').forEach(tr=>calcRowTr(tr));
 }
 function calcRow(input){ calcRowTr(input.closest('tr')); }
@@ -1599,7 +1634,8 @@ function renderModeB(){
     const grdTxt=(g.grade51!=null&&g.grade51!=='')?(g.grade51+(g.letter51?' ('+g.letter51+')':'')):'-';
     return `<tr class="border-b" data-sid="${st.ID}">
       <td class="px-2 py-1">${esc(st.number)}</td>
-      <td class="px-2 font-medium whitespace-nowrap">${esc(st.fullName)}</td>
+      <td class="px-2 font-medium whitespace-nowrap">${esc(nmFirst(st))}</td>
+      <td class="px-2 whitespace-nowrap">${esc(nmLast(st))}</td>
       <td class="px-2"><input type="number" class="inp w-20 text-sm bPct" value="${(g.percent!=null&&g.percent!=='')?g.percent:''}" oninput="calcModeBRow(this)" placeholder="%"></td>
       <td class="px-2"><select class="inp text-sm bLvl" onchange="calcModeBRow(this)">
         ${LEVELS_68.map(l=>`<option ${g.level68===l?'selected':''}>${l}</option>`).join('')}
@@ -1696,23 +1732,23 @@ function renderAbilityTables(){
   const g=(sid,key)=> (map[sid]||{})[key];
   // คุณลักษณะ
   document.getElementById('charTable').innerHTML=
-    `<thead><tr class="text-left text-slate-400 border-b"><th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th>`+
+    `<thead><tr class="text-left text-slate-400 border-b"><th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th><th class="px-1">นามสกุล</th>`+
     CHAR_68.map((c,i)=>`<th class="px-1 text-center" title="${esc(c.f)}">${i+1}</th>`).join('')+`<th class="px-1 text-center">สรุป</th></tr></thead><tbody>`+
-    sts.map(s=>`<tr class="border-b"><td class="px-1 py-1">${esc(s.number)}</td><td class="px-1 whitespace-nowrap">${esc(s.fullName)}</td>`+
+    sts.map(s=>`<tr class="border-b"><td class="px-1 py-1">${esc(s.number)}</td><td class="px-1 whitespace-nowrap">${esc(nmFirst(s))}</td><td class="px-1 whitespace-nowrap">${esc(nmLast(s))}</td>`+
       CHAR_68.map(c=>`<td class="px-1">${scoreSel('characteristic',c.f,g(s.ID,'characteristic|'+c.f),s.ID)}</td>`).join('')+
       `<td class="px-1 text-center font-semibold text-teal-700" id="charsum-${s.ID}">-</td></tr>`).join('')+`</tbody>`;
   // อ่านคิดเขียน
   document.getElementById('rtTable').innerHTML=
-    `<thead><tr class="text-left text-slate-400 border-b"><th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th>`+
+    `<thead><tr class="text-left text-slate-400 border-b"><th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th><th class="px-1">นามสกุล</th>`+
     READTHINK.map(c=>`<th class="px-1 text-center">${esc(c.s)}</th>`).join('')+`<th class="px-1 text-center">สรุป</th></tr></thead><tbody>`+
-    sts.map(s=>`<tr class="border-b"><td class="px-1 py-1">${esc(s.number)}</td><td class="px-1 whitespace-nowrap">${esc(s.fullName)}</td>`+
+    sts.map(s=>`<tr class="border-b"><td class="px-1 py-1">${esc(s.number)}</td><td class="px-1 whitespace-nowrap">${esc(nmFirst(s))}</td><td class="px-1 whitespace-nowrap">${esc(nmLast(s))}</td>`+
       READTHINK.map(c=>`<td class="px-1">${scoreSel('readthink',c.f,g(s.ID,'readthink|'+c.f),s.ID)}</td>`).join('')+
       `<td class="px-1 text-center font-semibold text-teal-700" id="rtsum-${s.ID}">-</td></tr>`).join('')+`</tbody>`;
   // กิจกรรม/สมรรถนะ
   document.getElementById('actTable').innerHTML=
-    `<thead><tr class="text-left text-slate-400 border-b"><th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th>`+
+    `<thead><tr class="text-left text-slate-400 border-b"><th class="py-2 px-1">เลขที่</th><th class="px-1">ชื่อ</th><th class="px-1">นามสกุล</th>`+
     ACT.map(c=>`<th class="px-1 text-center">${esc(c.s)}</th>`).join('')+`<th class="px-1 text-center">ชื่อชุมนุม</th><th class="px-1 text-center">สมรรถนะ</th></tr></thead><tbody>`+
-    sts.map(s=>`<tr class="border-b"><td class="px-1 py-1">${esc(s.number)}</td><td class="px-1 whitespace-nowrap">${esc(s.fullName)}</td>`+
+    sts.map(s=>`<tr class="border-b"><td class="px-1 py-1">${esc(s.number)}</td><td class="px-1 whitespace-nowrap">${esc(nmFirst(s))}</td><td class="px-1 whitespace-nowrap">${esc(nmLast(s))}</td>`+
       ACT.map(c=>`<td class="px-1">${passSel('activity',c.f,g(s.ID,'activity|'+c.f),s.ID)}</td>`).join('')+
       `<td class="px-1"><input class="inp text-xs ab-cell w-28" data-sid="${s.ID}" data-group="activity" data-item="ชื่อชุมนุม" value="${esc(g(s.ID,'activity|ชื่อชุมนุม')||'')}"></td>`+
       `<td class="px-1">${passSel('competency','สมรรถนะสำคัญของผู้เรียน',g(s.ID,'competency|สมรรถนะสำคัญของผู้เรียน'),s.ID)}</td></tr>`).join('')+`</tbody>`;
@@ -2262,7 +2298,7 @@ function attRow(s, status, kind, flagRef){
   const btns=ATT_STATUSES.map(([st,col])=>`<button onclick="setAtt('${kind}','${s.ID}','${st}')" class="px-2 py-1 rounded text-xs ${status===st?col+' text-white':'bg-slate-100 text-slate-500'}">${st}</button>`).join('');
   const ref = flagRef!==undefined ? `<span class="text-[11px] ${flagRef==='มา'?'text-emerald-600':(flagRef?'text-rose-500':'text-slate-300')} ml-1">เสาธง: ${flagRef||'-'}</span>` : '';
   return `<div class="flex items-center justify-between gap-2 py-1.5 border-b">
-    <div class="text-sm"><span class="text-slate-400">${esc(s.number)}.</span> ${esc(s.fullName)} ${ref}</div>
+    <div class="text-sm"><span class="text-slate-400">${esc(s.number)}.</span> ${esc(nmFirst(s))} ${esc(nmLast(s))} ${ref}</div>
     <div class="flex gap-1 shrink-0">${btns}</div></div>`;
 }
 function setAtt(kind, id, status){
@@ -2666,9 +2702,7 @@ function pp5CoverHTML(d){
       ${sign(s.directorName,'ผู้อำนวยการโรงเรียน')}
     </div>
     <div style="text-align:center;font-size:13px;margin-top:24px">
-      อนุมัติผลการเรียน เมื่อวันที่ ${esc(formatReportDate(s.reportDate)||'..............................')}<br><br>
-      ลงชื่อ ................................................ ผู้อนุมัติ<br>
-      <span>( ${esc(s.directorName||'............................')} )</span>
+      อนุมัติผลการเรียน เมื่อวันที่ ${esc(formatReportDate(s.reportDate)||'..............................')}
     </div>
   </div>`;
 }
