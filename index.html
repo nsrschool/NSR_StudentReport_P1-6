@@ -2848,18 +2848,20 @@ function pp5StudentsPage(d){
 }
 
 function pp5DocsPage(d){
-  let body='';
-  d.subjects.forEach(sub=>{
+  // แต่ละวิชาเป็นกลุ่มแยก — ตัดหน้าระหว่างวิชา ไม่ตัดกลางรูป
+  const parts=d.subjects.map((sub,i)=>{
     const docs=(d.docs[sub.ID]||[]);
-    body+=`<div style="margin-bottom:10px"><div style="font-weight:700;border-bottom:1px solid #cbd5e1;margin-bottom:4px">${esc(sub.code||'')} ${esc(sub.name)} [${esc(sub.classLevel)}]</div>`;
+    let body=`<div style="font-weight:700;font-size:13px;border-bottom:2px solid #0d9488;margin-bottom:8px;padding-bottom:4px">${esc(sub.code||'')} ${esc(sub.name)} [${esc(sub.classLevel)}]</div>`;
     if(!docs.length){ body+='<div style="color:#94a3b8;font-size:12px">— ยังไม่มีไฟล์คำอธิบาย —</div>'; }
     else body+=docs.map(doc=> doc.type==='image'
-      ? `<img src="https://drive.google.com/thumbnail?id=${esc(doc.fileId)}&sz=w1200" style="max-width:100%;max-height:260px;object-fit:contain;display:block;margin:4px 0">`
+      ? `<img src="https://drive.google.com/thumbnail?id=${esc(doc.fileId)}&sz=w1200" style="max-width:100%;object-fit:contain;display:block;margin:4px 0">`
       : `<div class="pp5pdf" data-fileid="${esc(doc.fileId)}" data-name="${esc(doc.fileName||'ไฟล์ PDF')}" style="font-size:12px;color:#94a3b8;margin:4px 0">⏳ กำลังโหลดเนื้อหา ${esc(doc.fileName||'PDF')} ...</div>`
     ).join('');
-    body+='</div>';
+    const isLast=i===d.subjects.length-1;
+    // ถ้าไม่ใช่วิชาสุดท้ายใส่ page-break หลังจบวิชา
+    return `<div style="${isLast?'':'page-break-after:always'}">${body}</div>`;
   });
-  return pp5Page(pp5Head(d,'คำอธิบายรายวิชา')+body);
+  return pp5Page(pp5Head(d,'คำอธิบายรายวิชา')+parts.join(''));
 }
 
 // โหลด PDF (base64 จาก backend) → เรนเดอร์ทุกหน้าเป็นรูปฝังในเล่ม
@@ -2875,11 +2877,11 @@ async function fillPP5Docs(){
       let imgs='';
       for(let n=1;n<=pdf.numPages;n++){
         const page=await pdf.getPage(n);
-        const vp=page.getViewport({scale:1.6});
+        const vp=page.getViewport({scale:1.2});
         const canvas=document.createElement('canvas');
         canvas.width=vp.width; canvas.height=vp.height;
         await page.render({canvasContext:canvas.getContext('2d'), viewport:vp}).promise;
-        imgs+=`<img src="${canvas.toDataURL('image/jpeg',0.82)}" style="width:100%;display:block;margin:4px 0;border:1px solid #e2e8f0;page-break-inside:avoid">`;
+        imgs+=`<img src="${canvas.toDataURL('image/jpeg',0.82)}" style="width:100%;display:block;margin:2px 0;">`;
       }
       el.outerHTML=imgs||`<div style="font-size:12px;color:#94a3b8">— ${esc(name)} (ไม่มีหน้า) —</div>`;
     }catch(err){
