@@ -82,6 +82,7 @@
 
   @media print{
     @page{size:A4;margin:0;}
+    @page land{size:A4 landscape;margin:0;}
     *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
     body{background:#fff !important;}
     header,nav,footer,.actionbar,.report-controls,.noprint{display:none !important;}
@@ -89,6 +90,7 @@
     .tabpane:not(.print-show){display:none !important;}
     .print-show{display:block !important;}
     .report-page{box-shadow:none !important;margin:0 !important;page-break-after:always;}
+    .pp5-land{page:land;}
   }
 </style>
 </head>
@@ -136,17 +138,11 @@
 
 <!-- ====================== ACTION BAR ====================== -->
 <div class="max-w-6xl mx-auto px-3 actionbar">
-  <div class="card p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+  <div class="card p-3">
     <p class="text-xs text-slate-500 flex items-start gap-1.5">
       <span>💡</span>
-      <span>ข้อมูลถูกบันทึกบน Google Sheets ของคุณโดยอัตโนมัติ สามารถเข้าใช้งานได้จากทุกอุปกรณ์</span>
+      <span>ข้อมูลถูกบันทึกบน Google Sheets ของคุณโดยอัตโนมัติ สามารถเข้าใช้งานได้จากทุกอุปกรณ์ • ระบบสำรองข้อมูลอัตโนมัติลง Google Drive</span>
     </p>
-    <div class="flex gap-2 shrink-0">
-      <button onclick="doBackup()" class="btn bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 text-xs">💾 สำรองข้อมูล</button>
-      <button onclick="document.getElementById('importFile').click()" class="btn bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 text-xs">📥 นำเข้าข้อมูล</button>
-      <button onclick="openClearModal()" class="btn bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 text-xs">🗑️ ล้างข้อมูล</button>
-      <input type="file" id="importFile" accept=".json" class="hidden" onchange="doImport(event)">
-    </div>
   </div>
 </div>
 
@@ -940,7 +936,7 @@
 <!-- ====================== FOOTER ====================== -->
 <footer class="text-center text-[11px] text-slate-400 py-6 px-4 leading-relaxed">
   พัฒนาโดย: ครูรุ่งนิรันดร์ • All Rights Reserved.<br>
-  สำหรับใช้ในโรงเรียนเท่านั้น ไม่อนุญาตให้ดัดแปลง แก้ไข ทำซ้ำ เพื่อการพาณิชย์ หรือแอบอ้างเป็นผลงานของตนเอง
+  สำหรับใช้ในโรงเรียนหนองสำโรงวิทยาเท่านั้น ไม่อนุญาตให้ดัดแปลง แก้ไข ทำซ้ำ เพื่อการพาณิชย์ หรือแอบอ้างเป็นผลงานของตนเอง
 </footer>
 
 <!-- ====================== MODALS ====================== -->
@@ -2805,7 +2801,10 @@ async function buildPP5Book(){
 }
 
 // กรอบหน้า A4
-function pp5Page(inner){ return `<div class="report-page" style="background:#fff;width:210mm;min-height:297mm;margin:0 auto 8px;padding:12mm 10mm;box-shadow:0 2px 8px rgba(0,0,0,.08);font-size:12px;color:#000;">${inner}</div>`; }
+function pp5Page(inner, land){
+  const w=land?'297mm':'210mm', h=land?'210mm':'297mm', cls=land?' pp5-land':'';
+  return `<div class="report-page${cls}" style="background:#fff;width:${w};min-height:${h};margin:0 auto 8px;padding:12mm 10mm;box-shadow:0 2px 8px rgba(0,0,0,.08);font-size:12px;color:#000;">${inner}</div>`;
+}
 function pp5Head(d,title){ const s=d.settings||{}; return `<div style="text-align:center;margin-bottom:10px">
   <div style="font-size:16px;font-weight:700">${esc(title)}</div>
   <div style="font-size:13px">${esc(s.schoolName||'')} • ชั้น ${esc(d.classLevel)} • ปีการศึกษา ${esc(s.academicYear||'')}</div></div>`; }
@@ -2871,7 +2870,7 @@ function pp5ScoresPage(d){
       <td style="border:1px solid #000;padding:2px 6px;white-space:nowrap">${esc(st.fullName)}</td>
       ${subs.map(sub=>{ const r=g.find(x=>x.subjectID===sub.ID)||{}; return `<td style="border:1px solid #000;text-align:center">${(r.grade51!=null&&r.grade51!=='')?esc(r.grade51):'-'}</td>`; }).join('')}</tr>`;
   }).join('');
-  return pp5Page(pp5Head(d,'สรุปผลการเรียน (เกรด) รายวิชา')+`<table style="border-collapse:collapse;width:100%;font-size:12px">${head}${rows}</table>`);
+  return pp5Page(pp5Head(d,'สรุปผลการเรียน (เกรด) รายวิชา')+`<table style="border-collapse:collapse;width:100%;font-size:12px">${head}${rows}</table>`, true);
 }
 
 function pp5AttMonthPages(d){
@@ -2883,7 +2882,7 @@ function pp5AttMonthPages(d){
       <td style="border:1px solid #000;padding:1px 4px;white-space:nowrap;font-size:11px">${esc(st.fullName)}</td>
       ${gr.dates.map(dt=>{ const v=st.byDate[dt]||''; const m={'มา':'✓','สาย':'ส','ลา':'ล','ขาด':'x'}; const c=v==='ขาด'?'color:#dc2626':(v==='ลา'?'color:#d97706':''); return `<td style="border:1px solid #000;text-align:center;font-size:10px;${c}">${m[v]||''}</td>`; }).join('')}
       <td style="border:1px solid #000;text-align:center;font-weight:700">${st.present}</td></tr>`).join('');
-    return pp5Page(pp5Head(d,'เวลาเรียนรายเดือน — '+gr.label)+`<table style="border-collapse:collapse;width:100%">${head}${rows}</table><div style="font-size:11px;margin-top:4px">✓=มา • ส=สาย • ล=ลา • x=ขาด • วันเปิดเรียน ${gr.dates.length} วัน</div>`);
+    return pp5Page(pp5Head(d,'เวลาเรียนรายเดือน — '+gr.label)+`<table style="border-collapse:collapse;width:100%">${head}${rows}</table><div style="font-size:11px;margin-top:4px">✓=มา • ส=สาย • ล=ลา • x=ขาด • วันเปิดเรียน ${gr.dates.length} วัน</div>`, true);
   }).join('');
 }
 
@@ -2900,7 +2899,7 @@ function pp5AttSummaryPage(d){
   }).join('');
   return pp5Page(pp5Head(d,'สรุปเวลาเรียน (ทั้งปี)')+`<table style="border-collapse:collapse;width:100%;font-size:12px">
     <tr style="background:#f1f5f9"><th style="border:1px solid #000;width:30px">ที่</th><th style="border:1px solid #000">ชื่อ-นามสกุล</th>${mh}<th style="border:1px solid #000;width:40px">รวมมา</th><th style="border:1px solid #000;width:48px">ร้อยละ</th></tr>
-    ${rows}</table><div style="font-size:11px;margin-top:4px">วันเปิดเรียนรวม ${r.totalSchoolDays} วัน • แดง = เวลาเรียนต่ำกว่า 80%</div>`);
+    ${rows}</table><div style="font-size:11px;margin-top:4px">วันเปิดเรียนรวม ${r.totalSchoolDays} วัน • แดง = เวลาเรียนต่ำกว่า 80%</div>`, true);
 }
 
 function pp5AbilityPage(d, group, items, title){
